@@ -17,29 +17,70 @@ from pathlib import Path
 import nest_asyncio
 nest_asyncio.apply()
 
+
+## START: ADDITIONAL CODE
 from colorlog import ColoredFormatter
+import getopt
+import sys
+from datetime import datetime
+
+# Standards and Command line
+loglevel="ERROR"
+logfile=""
+configfile="./config.json"
+opts, args = getopt.getopt(sys.argv[1:], 'f:l:c:', ['logfile=', 'loglevel=', 'configfile='])
+for opt, arg in opts:
+    if opt in ('-f', '--logfile'):
+        logfile=arg
+    elif opt in ('-l', '--loglevel'):
+        loglevel=arg
+    elif opt in ('-c', '--configfile'):
+        configfile=arg
+## END: ADDITIONAL CODE
 
 
 def setup_logger(name):
-    """Return a logger with a default ColoredFormatter."""
-    formatter = ColoredFormatter(
-        "%(log_color)s[%(levelname)-8s]-%(asctime)s%(reset)s %(cyan)s%(message)s%(reset)s",
-        datefmt='%Y-%m-%d %H:%M:%S',
-        reset=True,
-        log_colors={
-            'DEBUG':    'cyan',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'red',
-        }
-    )
+## START: ADDITIONAL CODE
+    global loglevel
+    global logfile
+#    """Return a logger with a default ColoredFormatter."""
+#    formatter = ColoredFormatter(
+#        "%(log_color)s <%(levelname)>s %(asctime)s%(reset)s %(cyan)s%(message)s%(reset)s",
+#        datefmt='%Y-%m-%d %H:%M:%S',
+#        reset=True,
+#        log_colors={
+#            'DEBUG':    'cyan',
+#            'INFO':     'green',
+#            'WARNING':  'yellow',
+#            'ERROR':    'red',
+#            'CRITICAL': 'red',
+#        }
+#    )
+## END: ADDITIONAL CODE
 
     logger = logging.getLogger(name)
     handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
+
+
+## START: ADDITIONAL CODE
+#    handler.setFormatter(formatter)
+## END: ADDITIONAL CODE
+
+
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
+
+
+## START: ADDITIONAL CODE
+    # Logging with standard LoxBerry log format
+    numeric_loglevel = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_loglevel, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    if not logfile:
+        logfile="/tmp/"+datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')[:-3]+"_sc2mqtt.log"
+    logging.basicConfig(filename=logfile,level=numeric_loglevel,format='%(asctime)s.%(msecs)03d <%(levelname)s> %(message)s',datefmt='%H:%M:%S')
+## END: ADDITIONAL CODE
+
 
     return logger
 
@@ -52,12 +93,28 @@ STATLIMITS = [
     { "mask": r"STATE.*COVER", "check": "window_closed", "fail": 0 },
 ]
 
-#logging.basicConfig(level=logging.INFO)
 _LOGGER = setup_logger("s2m")
 
 async def main():
+
+
+## START: ADDITIONAL CODE
+    global logfile
+    global loglevel
+    global configfile
+    global mqtttopic
+## END: ADDITIONAL CODE
+
+
     try:
-        with open("config.json", "r") as cfile:
+
+
+## START: ADDITIONAL CODE
+        #with open("config.json", "r") as cfile:
+        with open(configfile, "r") as cfile:
+## END: ADDITIONAL CODE
+
+
             cfo = json.load(cfile)
 
         for el in ["user", "password", "broker"]:
@@ -67,14 +124,20 @@ async def main():
         ad = SkodaAdapter(cfo["user"], cfo["password"])
         await ad.init()
         mqttc = mqtt.Client()
-        mqttc.connect(cfo["broker"])
+
+
+## START: ADDITIONAL CODE
+        mqtttopic = cfo["topic"]
+        #mqttc.connect(cfo["broker"])
         if int(cfo["brokerauth"]) == 1:
             mqttc.username_pw_set(username=cfo["brokeruser"],password=cfo["brokerpassword"])
         try:
             mqttc.connect(cfo["broker"],port=int(cfo["brokerport"]))
         except:
             _LOGGER.critical("Connection to broker failed")
-            exit(1)
+            return False
+## END: ADDITIONAL CODE
+
 
         mqttc.loop_start()
         
@@ -96,22 +159,18 @@ async def main():
         return False
     except json.decoder.JSONDecodeError:
         _LOGGER.critical("Config file found and readable, invalid contents!")
-        await configSample()
+        #await configSample()
         return False
 
 
-async def configSample():
-    _LOGGER.critical("Writing sample config as config.json.sample, please adjust as needed and save as config.json!")
-    with open("config.json.sample", "w") as cfile:
-        json.dump({
-            "user": "test@example.com",
-            "password": "my_very_speciaL_passw0rd",
-            "broker": "mqtt.local",
-            "brokerport": "1883",
-            "brokerauth": "1",
-            "brokeruser": "my_broker_usnerame",
-            "brokerpassword": "my_very_speciaL_bRoker_passw0rd"
-        }, cfile)
+#async def configSample():
+#    _LOGGER.critical("Writing sample config as config.json.sample, please adjust as needed and save as config.json!")
+#    with open("config.json.sample", "w") as cfile:
+#        json.dump({
+#            "user": "test@example.com",
+#            "password": "my_very_speciaL_passw0rd",
+#            "broker": "mqtt.local"
+#        }, cfile)
 
 
 
@@ -363,8 +422,8 @@ class SkodaAdapter:
 
             for vin,stateDict in self.vehicleStates.items():
                 publishdict = {}
-                mainjtopic = "skoda2mqtt/%s/JSTATE" % vin
-                mainstopic = "skoda2mqtt/%s/JSTATE"% vin
+                mainjtopic = "%s/%s/JSTATE" % (mqtttopic, vin)
+                mainstopic = "%s/%s/JSTATE"% (mqtttopic, vin)
                 mainctopic = "homeassistant/sensor/skoda2mqtt/%s/config" % vin
                 maincpayload = '{"state_topic": "%s","json_attributes_topic": "%s", "unique_id": "s2m_%s", "name": "S2M_%s", "value_template": "{{ value_json.GENERAL_STATUS }}" }' % (
                     mainstopic, mainjtopic,
@@ -383,10 +442,22 @@ class SkodaAdapter:
                         if "calc" in self.statusValues[stateId]:
                             state["value"] = self.statusValues[stateId]["calc"](state["value"])
                         _LOGGER.info("%s -> %s(%s)" %(self.statusValues[stateId]["statusName"], state["textId"], state["value"]))
-                        stopic = "skoda2mqtt/%s_%s/STATE"% (vin, self.statusValues[stateId]["statusName"])
-                        ntopic = "skoda2mqtt/%s_%s/STATENUM"% (vin, self.statusValues[stateId]["statusName"])
+                        stopic = "%s/%s_%s/STATE" %(mqtttopic, vin, self.statusValues[stateId]["statusName"])
+
+
+## START: ADDITIONAL CODE
+                        ntopic = "%s/%s_%s/STATENUM"% (mqtttopic, vin, self.statusValues[stateId]["statusName"])
+## END: ADDITIONAL CODE
+
+
                         spayload = "%s(%s)" %(state["textId"], state["value"]) if state["textId"] != state["value"] else state["value"]
+
+
+## START: ADDITIONAL CODE
                         npayload = "%s" % state["value"]
+## END: ADDITIONAL CODE
+
+
                         if stateId not in self.configured:
                             self.configured.append(stateId)
                             ctopic = "homeassistant/sensor/skoda2mqtt/%s_%s/config" % (vin, self.statusValues[stateId]["statusName"])
@@ -399,9 +470,19 @@ class SkodaAdapter:
                             if "unit_of_measurement" in self.statusValues[stateId] and self.statusValues[stateId]["unit_of_measurement"] != "":
                                 cpayload["unit_of_measurement"] = self.statusValues[stateId]["unit_of_measurement"]
 
-                            mqttc.publish(ctopic, json.dumps(cpayload))
+
+## START: ADDITIONAL CODE
+                            #mqttc.publish(ctopic, json.dumps(cpayload))
+## END: ADDITIONAL CODE
+
+
                         mqttc.publish(stopic, spayload)
+
+
+## START: ADDITIONAL CODE
                         mqttc.publish(ntopic, npayload)
+## END: ADDITIONAL CODE
+
 
                         publishdict[self.statusValues[stateId]["statusName"]] = {"value": state["value"], "textId": state["textId"]};
                         for sl in STATLIMITS:

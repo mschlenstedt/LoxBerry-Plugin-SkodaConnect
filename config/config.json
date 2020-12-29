@@ -1,1 +1,11 @@
-{"user": "michael@schlenn.net", "password": "gRundig24", "broker": "192.168.3.212", "brokerport": "1883", "brokerauth": "1", "brokeruser": "loxberry", "brokerpassword": "gRundig24"}
+{
+   "broker" : "localhost",
+   "brokerauth" : "1",
+   "brokerpassword" : "",
+   "brokerport" : "1883",
+   "brokeruser" : "",
+   "password" : "",
+   "topic" : "sc",
+   "usemqttgateway" : "false",
+   "user" : ""
+}

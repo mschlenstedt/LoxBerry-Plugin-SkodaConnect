@@ -22,8 +22,8 @@ if [[ ${LOGLEVEL} -eq 7 ]]; then
 fi
 
 
-if [ "$(pgrep -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py")" ]; then
-	LOGOK "sc2mqtt.py is running. Nothing to do."
+if [ "$(pgrep -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sclooper.sh")" ]; then
+	LOGOK "sc2mqtt looper is running. Nothing to do."
 	LOGEND "cron"
 else
 	LOGERR "sc2mqtt.py isn't running - restart!"

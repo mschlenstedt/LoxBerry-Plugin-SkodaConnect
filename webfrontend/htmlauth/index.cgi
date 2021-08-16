@@ -365,7 +365,7 @@ sub saveskconnect
 
 sub getstate
 {
-	my $pid = qx (pgrep -f $lbpbindir/sc2mqtt.py);
+	my $pid = qx (pgrep -f $lbpbindir/sclooper.sh);
 	chomp($pid);;
 	return ($pid);
 }

@@ -495,7 +495,9 @@ class SkodaAdapter:
                 #    json.dumps(publishdict)
                 #)
 
-            await asyncio.sleep(60)
+            _LOGGER.info("Done!")
+            exit()
+            #await asyncio.sleep(60)
 
     async def getVehicleStatus(self, vin):
         url = await self.replaceVarInUrl("$homeregion/fs-car/bs/vsr/v1/$type/$country/vehicles/$vin/status", vin)

@@ -28,38 +28,47 @@ case "$1" in
   start|restart)
 
 	if [[ $1 -eq "restart" ]]; then
-		LOGINF "Stopping sc2mqtt..."
-		pkill -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py" >> ${FILENAME} 2>&1
+		LOGINF "Stopping sc2mqtt looper..."
+		pkill -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sclooper.sh" >> ${FILENAME} 2>&1
 	fi
 
-	if [ "$(pgrep -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py")" ]; then
-		LOGERR "sc2mqtt.py already running."
+	if [ "$(pgrep -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sclooper.sh")" ]; then
+		LOGERR "sc2mqtt looper already running."
 		LOGEND "sc2mqtt"
 		exit 1
 	fi
 
-	LOGINF "Starting sc2mqtt..."
-	if [[ ${DEBUG} -eq 1 ]]; then
-		$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py --logfile ${FILENAME} --loglevel DEBUG --configfile $LBHOMEDIR/config/plugins/${PLUGINNAME}/config.json > /dev/null 2>&1 &
-	else
-		$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py --logfile ${FILENAME} --loglevel ERROR --configfile $LBHOMEDIR/config/plugins/${PLUGINNAME}/config.json > /dev/null 2>&1 &
+	LOGINF "Starting sc2mqtt looper..."
+	$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sclooper.sh > /dev/null 2>&1 &
 
-	fi
 	LOGEND "sc2mqtt"
         exit 0
         ;;
 
   stop)
 
-	LOGINF "Stopping sc2mqtt..."
-	pkill -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py" >> ${FILENAME} 2>&1
+	LOGINF "Stopping sc2mqtt looper..."
+	pkill -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sclooper.sh" >> ${FILENAME} 2>&1
 
-	if [ "$(pgrep -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py")" ]; then
-		LOGERR "sc2mqtt.py could not be stopped."
+	if [ "$(pgrep -f "$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sclooper.sh")" ]; then
+		LOGERR "sc2mqtt looper could not be stopped."
 	else
-		LOGOK "sc2mqtt.py stopped successfully."
+		LOGOK "sc2mqtt looper stopped successfully."
 	fi
 
+	LOGEND "sc2mqtt"
+        exit 0
+        ;;
+
+  poll)
+
+	LOGINF "Polling data from Skoda Connect server..."
+	if [[ ${DEBUG} -eq 1 ]]; then
+		$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py --logfile ${FILENAME} --loglevel DEBUG --configfile $LBHOMEDIR/config/plugins/${PLUGINNAME}/config.json > /dev/null 2>&1
+	else
+		$LBHOMEDIR/bin/plugins/${PLUGINNAME}/sc2mqtt.py --logfile ${FILENAME} --loglevel ERROR --configfile $LBHOMEDIR/config/plugins/${PLUGINNAME}/config.json > /dev/null 2>&1
+
+	fi
 	LOGEND "sc2mqtt"
         exit 0
         ;;
